@@ -66,12 +66,6 @@ class PostURLTests(TestCase):
         response = self.authorized_client.get('/create/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_post_edit_page(self):
-        """Страница реактирования поста доступна только автору"""
-        post_id = self.post.id
-        response = self.author_client.get(f'/posts/{post_id}/edit/')
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-
     def test_follow_index(self):
         """Страница избранных авторов доступна
         только авторизованным пользователям"""
