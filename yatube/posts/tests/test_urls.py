@@ -1,91 +1,122 @@
 from http import HTTPStatus
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from ..models import Group, Post, User
+from ..models import Follow, Group, Post
+
+User = get_user_model()
 
 
-class URLTests(TestCase):
+class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create(username="NoName")
+        cls.user = User.objects.create_user(username='auth')
         cls.group = Group.objects.create(
-            title="Тестовая группа",
-            slug="test-slug",
-            description="Тестовое описание",
+            title='Тестовый заголовок',
+            slug='test-slug',
+            description='Тестовое описание'
         )
-        # Создадим запись в БД тестовый пост
         cls.post = Post.objects.create(
+            text='Тестовый текст более 15 символов',
             author=cls.user,
-            text="Тестовый пост",
-            id=3,
+            group=cls.group
         )
-
-        cls.templates = [
-            "/",
-            f"/group/{URLTests.group.slug}/",
-            f"/profile/{URLTests.user}/",
-            f"/posts/{URLTests.post.id}/",
-        ]
 
     def setUp(self):
         self.guest_client = Client()
+        self.user = User.objects.create_user(username='HasNoName')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.author = self.user
+        self.author_client = Client()
+        self.author_client.force_login(self.author)
+
+    def test_unathorised_pages(self):
+        """Тестирует страницы, для которых не нужна авторизация"""
+        status_codes = {
+            reverse('posts:index'): HTTPStatus.OK,
+            reverse(
+                'posts:profile', kwargs={
+                    'username': PostURLTests.user.username
+                }
+            ): HTTPStatus.OK,
+            reverse(
+                'posts:post_detail', kwargs={
+                    'post_id': PostURLTests.post.id
+                }
+            ): HTTPStatus.OK,
+            reverse(
+                'posts:group_list', kwargs={
+                    'slug': PostURLTests.group.slug
+                }
+            ): HTTPStatus.OK,
+            '/unexisting_page/': HTTPStatus.NOT_FOUND
+        }
+        for address, code in status_codes.items():
+            with self.subTest(address=address):
+                response = self.guest_client.get(address)
+                self.assertEqual(response.status_code, code)
+
+    def test_post_create_page(self):
+        """Страница создания поста доступна
+        только авторизованным пользователям"""
+        response = self.authorized_client.get('/create/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_post_edit_page(self):
+        """Страница реактирования поста доступна только автору"""
+        post_id = self.post.id
+        response = self.author_client.get(f'/posts/{post_id}/edit/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_follow_index(self):
+        """Страница избранных авторов доступна
+        только авторизованным пользователям"""
+        response = self.authorized_client.get('/follow/')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_profile_follow(self):
+        """Функция подписки доступна
+        только авторизованным пользователям"""
+        username = PostURLTests.user.username
+        response = self.authorized_client.get(f'/profile/{username}/follow/')
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+
+    def test_profile_unfollow(self):
+        """Функция отписки доступна
+        только авторизованным пользователям"""
+        Follow.objects.create(
+            author=PostURLTests.user,
+            user=self.user
+        )
+        username = self.user.username
+        response = self.authorized_client.get(f'/profile/{username}/unfollow/')
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-
+        post_id = self.post.id
+        username = self.user.username
+        group_slug = self.group.slug
         templates_url_names = {
-            "posts/index.html": "/",
-            "posts/group_list.html": f"/group/{URLTests.group.slug}/",
-            "posts/profile.html": f"/profile/{URLTests.user.username}/",
-            "posts/post_detail.html": f"/posts/{URLTests.post.id}/",
+            '/': 'posts/index.html',
+            f'/profile/{username}/': 'posts/profile.html',
+            f'/posts/{post_id}/': 'posts/post_detail.html',
+            f'/group/{group_slug}/': 'posts/group_list.html',
         }
-        for template, address in templates_url_names.items():
+        for address, template in templates_url_names.items():
             with self.subTest(address=address):
-                response = self.authorized_client.get(address)
-                self.assertTemplateUsed(response, template)
-
-    def test_posts_post_id_edit_url_exists_at_author(self):
-        """Страница /posts/post_id/edit/ доступна только автору."""
-        response = self.authorized_client.get(f"/posts/{self.post.id}/edit/")
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_post_edit_url_redirect_guest(self):
-        """Страница posts/post_id/edit/ перенаправляет
-        неавторизованного клиента на страницу авторизации."""
-        response = self.guest_client.get(
-            f"/posts/{self.post.id}/edit/"
-        )
-        self.assertRedirects(
-            response, f"/auth/login/?next=/posts/{self.post.id}/edit/"
-        )
-
-    def test_create_url_redirect_guest(self):
-        """Страница /create/ перенаправляет неавторизованного клиента
-        на страницу авторизации."""
-        response = self.guest_client.get("/create/")
-        self.assertRedirects(response, "/auth/login/?next=/create/")
-
-    def test_create_url_exists_at_desired_location_authorized(self):
-        """Страница /create/ доступна только
-        авторизованному пользователю."""
-        response = self.authorized_client.get(
-            reverse("posts:post_create"), follow=True)
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_urls_exists_at_desired_location(self):
-        """Проверяем общедоступные страницы"""
-        for url in self.templates:
-            with self.subTest(url):
-                response = self.guest_client.get(url)
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_unexisting_page_at_desired_location(self):
-        """Страница /unexisting_page/ должна выдать ошибку."""
-        response = self.guest_client.get("/unexisting_page/")
-        self.assertEqual(
-            response.status_code, HTTPStatus.NOT_FOUND)
+                error_name = f'Ошибка: нет доступа до страницы {address}'
+                self.assertEqual(
+                    self.guest_client.get(address).status_code,
+                    HTTPStatus.OK,
+                    error_name
+                )
+                self.assertTemplateUsed(
+                    self.guest_client.get(address),
+                    template,
+                    error_name
+                )

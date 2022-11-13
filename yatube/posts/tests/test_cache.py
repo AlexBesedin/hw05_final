@@ -5,37 +5,41 @@ from django.urls import reverse
 from ..models import Group, Post, User
 
 
-class PostsCacheTests(TestCase):
+class CacheTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create(username="NoName")
+        cls.user = User.objects.create_user(username='auth')
         cls.group = Group.objects.create(
-            title="Тестовый заголовок группы",
-            slug="test-slug",
-            description="Тестовое описание",
+            title='Тестовый заголовок',
+            slug='test-slug',
+            description='Тестовое описание'
         )
-        # Создадим запись в БД
         cls.post = Post.objects.create(
+            text='Тестовый текст',
             author=cls.user,
-            text="Тестовый пост",
-            group=cls.group,
+            group=cls.group
         )
 
     def setUp(self):
         self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        self.author = CacheTests.user
+        self.author_client = Client()
+        self.author_client.force_login(self.author)
         cache.clear()
 
-    def test_cache_index(self):
-        """Проверяем корректную работу кэша на главной странице"""
-        response_first = self.authorized_client.get(reverse("posts:index"))
-        post_1 = Post.objects.get(pk=1)
-        post_1.text = "Измененный текст"
-        post_1.save()
-        response_second = self.authorized_client.get(reverse("posts:index"))
-        self.assertEqual(response_first.content, response_second.content)
+    def test_cache_index_page(self):
+        """Содержимое главной страницы сайта кешируется."""
+        new_post = Post.objects.create(
+            text='Проверка кеша',
+            group=CacheTests.group,
+            author=CacheTests.user
+        )
+        response = self.author_client.get(reverse('posts:index'))
+        self.assertContains(response, new_post)
+        new_post.delete()
+        response = self.author_client.get(reverse('posts:index'))
+        self.assertContains(response, new_post)
         cache.clear()
-        response_third = self.authorized_client.get(reverse("posts:index"))
-        self.assertNotEqual(response_first.content, response_third.content)
+        response = self.author_client.get(reverse('posts:index'))
+        self.assertNotContains(response, new_post)

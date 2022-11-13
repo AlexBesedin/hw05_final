@@ -1,6 +1,7 @@
 from django import forms
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.core.cache import cache
 
 from ..models import Follow, Group, Post, User
 
@@ -29,32 +30,27 @@ class PostsPagesTests(TestCase):
 
     def test_pages_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
+        cache.close()
+        group = PostsPagesTests.group
+        user = PostsPagesTests.user
+        post = PostsPagesTests.post
         templates_pages_names = {
-            reverse("posts:index"): ["posts/index.html"],
+            reverse('posts:index'): 'posts/index.html',
+            reverse('posts:group_list',
+                    args=[group.slug]): 'posts/group_list.html',
             reverse(
-                "posts:group_list", kwargs={"slug": self.group.slug}): [
-                "posts/group_list.html"
-            ],
-            reverse(
-                "posts:profile", kwargs={"username": self.user.username}): [
-                "posts/profile.html"
-            ],
-            reverse(
-                "posts:post_detail", kwargs={"post_id": self.post.pk}): [
-                "posts/post_detail.html"
-            ],
-            reverse(
-                "posts:post_create"): ["posts/create_post.html"],
-            reverse(
-                "posts:post_edit", kwargs={"post_id": self.post.pk}): [
-                "posts/create_post.html"
-            ],
+                'posts:profile', args=[user.username]
+            ): 'posts/profile.html',
+            reverse('posts:post_detail',
+                    args=[post.pk]): 'posts/post_detail.html',
+            reverse('posts:post_create'): 'posts/create_post.html',
+            reverse('posts:post_edit',
+                    args=[post.pk]): 'posts/create_post.html',
         }
-
         for reverse_name, template in templates_pages_names.items():
-            with self.subTest(reverse_name=reverse_name):
+            with self.subTest(template=template):
                 response = self.authorized_client.get(reverse_name)
-                self.assertTemplateUsed(response, template[0])
+                self.assertTemplateUsed(response, template)
 
     def test_index_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
@@ -71,7 +67,7 @@ class PostsPagesTests(TestCase):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.guest_client.get(
             reverse(
-                "posts:group_list", kwargs={"slug": self.group.slug})
+                "posts:group_list", args=[self.group.slug])
         )
         expected = list(Post.objects.filter(group_id=self.group.id)[:10])
         self.assertEqual(list(response.context["page_obj"]), expected)
@@ -130,7 +126,7 @@ class PostsPagesTests(TestCase):
         form_fields = {
             reverse("posts:index"): Post.objects.get(group=self.post.group),
             reverse(
-                "posts:group_list", kwargs={"slug": self.group.slug}
+                "posts:group_list", args=[self.group.slug]
             ): Post.objects.get(group=self.post.group),
             reverse(
                 "posts:profile", kwargs={"username": self.post.author}
@@ -174,7 +170,7 @@ class PaginatorViewsTest(TestCase):
         templates_pages_names = {
             "posts/index.html": reverse("posts:index"),
             "posts/group_list.html": reverse(
-                "posts:group_list", kwargs={"slug": "test-slug2"}
+                "posts:group_list", args=[self.group.slug]
             ),
             "posts/profile.html": reverse(
                 "posts:profile", kwargs={"username": "AnonNoName"}
@@ -193,7 +189,7 @@ class PaginatorViewsTest(TestCase):
         templates_pages_names = {
             "posts/index.html": reverse("posts:index") + "?page=2",
             "posts/group_list.html": reverse(
-                "posts:group_list", kwargs={"slug": "test-slug2"}
+                "posts:group_list", args=[self.group.slug]
             )
             + "?page=2",
             "posts/profile.html": reverse(

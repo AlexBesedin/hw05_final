@@ -31,6 +31,7 @@ def group_posts(request, slug):
     context = {
         "group": group,
         "page_obj": page_obj,
+        "posts": posts,
     }
     return render(request, "posts/group_list.html", context)
 
@@ -115,7 +116,9 @@ def add_comment(request, post_id):
 def follow_index(request):
     post_list = Post.objects.filter(author__following__user=request.user)
     page_obj = paginator_func(post_list, request)
-    context = {"page_obj": page_obj}
+    context = {
+        "page_obj": page_obj
+    }
     return render(request, "posts/follow.html", context)
 
 
