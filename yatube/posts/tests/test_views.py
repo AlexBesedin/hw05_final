@@ -282,3 +282,4 @@ class PaginatorViewsTest(TestCase):
                 f"/posts/{self.post.pk}/"
             )
             self.assertNotContains(response, "комментарий от юзера")
+            
