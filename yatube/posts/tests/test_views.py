@@ -207,53 +207,62 @@ class PaginatorViewsTest(TestCase):
 
 
 class FollowTests(TestCase):
-    def setUp(self):
-        self.authorized_client_follower = Client()
-        self.authorized_client_following = Client()
-        self.user_follower = User.objects.create(username="follower")
-        self.user_following = User.objects.create(username="following")
-        self.post = Post.objects.create(
-            author=self.user_following,
-            text="Тестовая запись  для подписчиков"
-        )
-        self.authorized_client_follower.force_login(self.user_follower)
-        self.authorized_client_following.force_login(self.user_following)
+    class FollowViewsTest(TestCase):
+        @classmethod
+        def setUpClass(cls):
+            super().setUpClass()
+            cls.user_following = User.objects.create(
+                username='user_following',
+            )
+            cls.user_follower = User.objects.create(
+                username='user_follower',
+            )
+            cls.post = Post.objects.create(
+                text='Подпишись на меня',
+                author=cls.user_following,
+            )
 
-    def test_post_profile_follow(self):
-        """Проверка подписки на пользователя."""
-        count_follow = Follow.objects.count()
-        self.authorized_client_follower.get(
-            reverse("posts:profile_follow",
-                    kwargs={"username": self.user_following.username},
-                    )
-        )
-        follow = Follow.objects.all().latest('id')
-        self.assertEqual(Follow.objects.all().count(), count_follow + 1)
-        self.assertEqual(follow.author_id, self.user_following)
-        self.assertEqual(follow.user_id, self.user_follower)
+        def setUp(self):
+            cache.clear()
+            self.authorized_client_follower = Client()
+            self.authorized_client_follower.force_login(self.user_follower)
+            self.authorized_client_following = Client()
+            self.authorized_client_following.force_login(self.user_following)
 
-    def test_post_profile_unfollow(self):
-        """Проверка отписки от пользователя."""
-        Follow.objects.create(
-            author=self.user_follower,
-            user=self.user_following
-        )
-        count_follow = Follow.objects.count()
-        self.authorized_client_follower.get(
-            reverse("posts:profile_unfollow",
-                    kwargs={"username": self.user_following.username},
-                    )
-        )
-        self.assertEqual(Follow.objects.all().count(), count_follow - 1)
+        def test_post_profile_follow(self):
+            """Проверка подписки на пользователя."""
+            count_follow = Follow.objects.count()
+            self.authorized_client_follower.post(
+                reverse(
+                    'posts:profile_follow',
+                    kwargs={'username': self.user_follower}))
+            follow = Follow.objects.all().latest('id')
+            self.assertEqual(Follow.objects.count(), count_follow + 1)
+            self.assertEqual(follow.author_id, self.user_follower.id)
+            self.assertEqual(follow.user_id, self.user_following.id)
 
-    def test_post_follow_index_follower(self):
-        """Запись появляется в ленте подписчиков."""
-        Follow.objects.create(
-            user=self.user_follower,
-            author=self.user_following
-        )
-        response = self.authorized_client_follower.get("/follow/")
-        post_text_0 = response.context["page_obj"][0].text
-        self.assertEqual(post_text_0, "Тестовая запись  для подписчиков")
-        response = self.authorized_client_following.get("/follow/")
-        self.assertNotEqual(response, "Тестовая запись  для подписчиков")
+        def test_post_profile_unfollow(self):
+            """Проверка отписки от пользователя."""
+            Follow.objects.create(
+                author=self.user_follower,
+                user=self.user_following
+            )
+            count_follow = Follow.objects.count()
+            self.authorized_client_follower.get(
+                reverse("posts:profile_unfollow",
+                        kwargs={"username": self.user_follower.username},
+                        )
+            )
+            self.assertEqual(Follow.objects.all().count(), count_follow - 1)
+
+        def test_post_follow_index_follower(self):
+            """Запись появляется в ленте подписчиков."""
+            Follow.objects.create(
+                user=self.user_follower,
+                author=self.user_following
+            )
+            response = self.authorized_client_follower.get("/follow/")
+            post_text_0 = response.context["page_obj"][0].text
+            self.assertEqual(post_text_0, "Тестовая запись  для подписчиков")
+            response = self.authorized_client_following.get("/follow/")
+            self.assertNotEqual(response, "Тестовая запись  для подписчиков")
