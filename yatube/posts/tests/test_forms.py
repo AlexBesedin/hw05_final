@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from ..models import Group, Post, User
+from ..models import Group, Post, User, Comment
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -18,6 +18,7 @@ class PostCreateFormTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create(username="NoNoName")
+        cls.author = User.objects.create(username="NoAuthor")
         cls.form = PostCreateFormTests()
         cls.group = Group.objects.create(
             title="Тестовый заголовок группы",
@@ -40,6 +41,8 @@ class PostCreateFormTests(TestCase):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.auth_user_comment = Client()
+        self.auth_user_comment.force_login(self.author)
 
     def test_create_post(self):
         """Проверка, что валидная форма создаёт пост"""
@@ -98,9 +101,7 @@ class PostCreateFormTests(TestCase):
 
     def test_create_post_with_picture(self):
         """Валидная форма создает запись с картинкой"""
-        # Подсчитаем количество записей
         posts_count = Post.objects.count()
-        # Подготавливаем данные для передачи в форму
         small_gif = (
             b"\x47\x49\x46\x38\x39\x61\x02\x00"
             b"\x01\x00\x80\x00\x00\x00\x00\x00"
@@ -122,7 +123,6 @@ class PostCreateFormTests(TestCase):
         response = self.authorized_client.post(
             reverse("posts:post_create"), data=form_data, follow=True
         )
-        # Проверяем, сработал ли редирект
         self.assertRedirects(
             response,
             reverse(
@@ -130,13 +130,35 @@ class PostCreateFormTests(TestCase):
                 kwargs={"username": PostCreateFormTests.user}
             ),
         )
-        # Проверяем, увеличилось ли число постов
         self.assertEqual(Post.objects.count(), posts_count + 1)
-        # Проверяем, что создалась запись с нашим слагом
         self.assertTrue(
             Post.objects.filter(
                 group=PostCreateFormTests.group,
                 author=PostCreateFormTests.user,
                 text="Тестовый текст",
             ).exists()
+        ),
+
+    def test_authorized_user_create_comment(self):
+        """Проверка создания коментария авторизированным клиентом."""
+        comments_count = Comment.objects.count()
+        post = Post.objects.create(
+            text='Текст поста для редактирования',
+            author=self.author)
+        form_data = {'text': 'Тестовый коментарий'}
+        response = self.auth_user_comment.post(
+            reverse('posts:add_comment',
+                    kwargs={
+                        'post_id': post.id
+                    }
+                    ),
+            data=form_data,
+            follow=True
         )
+        comment = Comment.objects.latest('id')
+        self.assertEqual(Comment.objects.count(), comments_count + 1)
+        self.assertEqual(comment.text, form_data['text'])
+        self.assertEqual(comment.author, self.author)
+        self.assertEqual(comment.post_id, post.id)
+        self.assertRedirects(
+            response, reverse('posts:post_detail', args={post.id}))
