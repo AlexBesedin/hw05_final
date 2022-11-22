@@ -1,39 +1,54 @@
 {% load static %}
-<header>
-  <nav class="navbar navbar-red" style="background-color: #00BFFF">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=2">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="navbar navbar-expand-lg bg-dark navbar-dark fixed-top">
     <div class="container">
-      <a class="navbar-brand" href="{% url 'posts:index' %}">
-        <img src="{% static 'img/among.png' %}" width="30" height="30" class="d-inline-block align-top" alt="">
-        <span style="color:red">Ya</span>tuple
-      </a>
+    <a class="navbar-brand" href="{% url 'posts:index' %}">
+    <img src="{% static 'img/among.png' %}" width="30" height="30" class="d-inline-block align-top" alt="">
+    <span style="color:red">Yap</span>hub
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+    <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse flex-row-reverse" id="collapsibleNavbar">
       {% with request.resolver_match.view_name as view_name %}
       <ul class="nav nav-pills">
         <li class="nav-item">
           <a class="nav-link
-          {% if request.resolver_match.view_name  == 'about:author' %}
-       active
-     {% endif %}"
-             href="{% url 'about:author' %} ">Об авторе</a>
+            {% if request.resolver_match.view_name  == 'about:author' %}
+            active
+            {% endif %}"
+            href="{% url 'about:author' %} ">Об авторе</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if view_name  == 'about:tech' %}active{% endif %}"
-             href="{% url 'about:tech' %}">Технологии</a>
+            href="{% url 'about:tech' %}">Технологии</a>
         </li>
         {% if request.user.is_authenticated %}
         <li class="nav-item">
           <a class="nav-link {% if view_name  == 'posts:post_create' %}active{% endif %}"
-               href="{% url 'posts:post_create' %}">
-              Новая запись
-            </a>
+            href="{% url 'posts:post_create' %}">
+          Новая запись
+          </a>
         </li>
         <li class="nav-item">
           <a class="nav-link link-light" href="{% url 'users:password_change' %}">Изменить пароль</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link link-light" href="{% url 'users:logout' %}">Выйти</a>
+          <a class="nav-link link-light" href="{% url 'users:logout' %}">
+          <img src="{% static 'img/logout_2.png' %}" width="26" height="26" class="d-inline-block align-top" alt="Выход"></a>
         </li>
         <li class="nav-item">
-          Пользователь: {{ user.username }}
+          <button type="button" class="btn btn-dark">
+          <img src="{% static 'img/user_profile.png' %}" width="28" height="28" class="d-inline-block align-top" alt="">  {{ user.username }} </button>
         </li>
         {% else %}
         <li class="nav-item">
@@ -47,7 +62,5 @@
       {# Конец добавленого в спринте #}
       {% endwith %}
     </div>
-  </nav>
-</header>
-
-
+    </div>>
+  </header>

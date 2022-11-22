@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 {% extends 'base.html' %}
 {% load thumbnail %}
+{% load static %}
 {% block title %}
 Пост {{ post.text|truncatechars:30 }}
 {% endblock %}
@@ -10,21 +11,21 @@
         <article class="col-12 col-md-12"
         <ul class="list-group list-group-flush">
             <li class="list-group-item">
-                Дата публикации:<br>  {{ post.pub_date }}
+
+                <b>Автор:</b> <span> {{post.author.get_full_name|default:post.author.username}} </span >
             </li>
             {% if post.group %}
             <li class="list-group-item">
-                Группа: {{ post.group }}<!-- Название группы -->
-                <br><a href="{% url 'posts:group_list' post.group.slug %}">
-                все записи группы
+                <b>Группа:</b><a href="{% url 'posts:group_list' post.group.slug %}">
+                {{ post.group }}
                 {% endif %}
                 </a>
             </li>
             <li class="list-group-item">
-                Автор: <span> {{ author.get_full_name }} </span >
+                <b>Дата публикации:</b><br>  {{ post.pub_date }}
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center">
-                Всего постов автора:  {{ posts_count }}
+                <b>Количество постов:</b>  {{ posts_count }}
             </li>
             <li class="list-group-item">
                 <a href="{% url 'posts:profile' post.author.username %}">
@@ -32,20 +33,26 @@
                 </a>
             </li>
         </ul>
+        <hr>
+        {% if user.is_authenticated %}
         {% include 'posts/includes/follow_button.html' %}
+        {% endif %}
     </aside>
     <article class="col-12 col-md-9">
         {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
         <img class="img-fluid" src="{{ im.url }}">
         {% endthumbnail %}
+        {% if user == post.author %}
+        {% endif %}
         <p>
             {{ post.text|linebreaks }}
         </p>
-        {% if user == post.author %}
-        <a class="btn btn-outline-primary" href="{% url 'posts:post_edit' post.pk %}">
-        Редактировать запись
-        </a>
+        {% if user.is_authenticated %}
+        <div style="display: block; text-align: right">
+        <a href="{% url 'posts:post_edit' post.pk %}">
+            <img src="{% static 'img/edit.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""></div>
         {% endif %}
+        </a>
         {% load user_filters %}
         {% if user.is_authenticated %}
         <div class="card my-4">
@@ -78,3 +85,4 @@
     </article>
 </div>
 </div>
+

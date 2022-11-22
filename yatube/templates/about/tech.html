@@ -2,9 +2,10 @@
 {% extends "base.html" %}
 {% block title %}Технологии{% endblock %}
 {% block content %}
+{% load static %}
 {% comment %} Колонки с отступом сверху и снизу {% endcomment %}
 <div class="row">
-  <h1>Вот что я умею</h1>
+  <h1>Технологический стек:</h1>
   {% comment %}
     Боковой блок со списком технологий
     Займет всю ширину блока на мобильном
@@ -13,10 +14,21 @@
   <aside class="col-12 col-md-3">
     <ul class="list-group list-group-flush">
       <li class="list-group-item">
-        Python
+        <img src="{% static 'img/python.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""> Python 3.7
       </li>
       <li class="list-group-item">
-        Django
+        <img src="{% static 'img/django.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""> Django 2.2.16
+      </li>
+      <li class="list-group-item">
+        <img src="{% static 'img/html.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""> HTML 5
+      </li>
+      </li>
+      <li class="list-group-item">
+        <img src="{% static 'img/bootstrap.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""> CSS Bootstrap v5.0.1
+      </li>
+      </li>
+      <li class="list-group-item">
+        <img src="{% static 'img/database.png' %}" width="28" height="28" class="d-inline-block align-top" alt=""> SQLite3
       </li>
     </ul>
   </aside>
@@ -26,9 +38,7 @@
     и 75% при размерах экрана ≥768px
   {% endcomment %}
   <article class="col-12 col-md-9">
-    <p>Текст страницы "Технологии"</p>
+    <p><span style="color:red">Yap</span>hub - это учебный проект(социальная сеть) с авторизацией, персональными лентами, комментариями и подписками на авторов статей, написанный в рамках обучения на курсе Яндекс практикум Python Backend developer плюс. </p>
   </article>
 </div>
-
-На этой странице можно рассказать, какие программные инструменты вы применили для создания этого сайта, какие навыки вам помогли, с чем вы хорошо разобрались, а с чем — не очень. Картинки и нестандартные подходы приветствуются: эта страница может получиться очень интересной.
 {% endblock %}
